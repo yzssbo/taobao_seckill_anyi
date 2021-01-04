@@ -18,6 +18,10 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
+from config import global_config
+
+import pyautogui
+pyautogui.PAUSE = 0.5
 
 
 # 抢购失败最大次数
@@ -51,6 +55,7 @@ class ChromeDrive:
     def start_driver(self):
         try:
             driver = self.find_chromedriver()
+            driver.set_window_size(1200, 1000)
         except WebDriverException:
             print("Unable to find chromedriver, Please check the drive path.")
         else:
@@ -59,10 +64,12 @@ class ChromeDrive:
     def find_chromedriver(self):
         try:
             driver = webdriver.Chrome()
+            driver.set_window_size(1200, 1000)
 
         except WebDriverException:
             try:
                 driver = webdriver.Chrome(executable_path=self.chrome_path, chrome_options=self.build_chrome_options())
+                driver.set_window_size(1200, 1000)
 
             except WebDriverException:
                 raise
@@ -134,6 +141,7 @@ class ChromeDrive:
             self.driver.find_element_by_id("J_SelectAll1").click()
             print("已经选中全部商品！！！")
 
+        self.driver.maximize_window()
         submit_succ = False
         retry_count = 0
 
@@ -151,9 +159,24 @@ class ChromeDrive:
                 retry_count += 1
 
                 try:
-
+# 判断存在结算按钮
                     if self.driver.find_element_by_id("J_Go"):
-                        self.driver.find_element_by_id("J_Go").click()
+                        # coords = pyautogui.locateOnScreen('/Users/chenhx/Desktop/github/taobao_seckill/img/jiesuan.jpg')
+                        # x, y = pyautogui.center(coords)
+                        #   此处的计算值请填写自己的,此处要做成配置项
+                        # x = 27.3 / 32.1 * 1680 = 1428.8
+                        # y = 11.4 / 20.7 * 1050 = 578.3
+                        width = pyautogui.size().width
+                        height = pyautogui.size().height
+                        thisWidth = global_config.getRaw('config', 'thisWidth')
+                        thisHeight = global_config.getRaw('config', 'thisHeight')
+                        jieSuanWidth = global_config.getRaw('config', 'jieSuanWidth')
+                        jieSuanHeight = global_config.getRaw('config', 'jieSuanHeight')
+                        x = jieSuanWidth/thisWidth * width
+                        y = jieSuanHeight/thisHeight * height
+                        print(f"屏幕宽高为：({width},{height})")
+                        print(f"坐标为：({x},{y})")
+                        pyautogui.leftClick(x, y)
                         print("已经点击结算按钮...")
                         click_submit_times = 0
                         while True:
@@ -166,7 +189,7 @@ class ChromeDrive:
                                 else:
                                     print("提交订单失败...")
                             except Exception as e:
-
+                                # TODO 待优化，这里可能需要返回购物车页面继续进行
                                 print("没发现提交按钮, 页面未加载, 重试...")
                                 click_submit_times = click_submit_times + 1
                                 sleep(0.1)
