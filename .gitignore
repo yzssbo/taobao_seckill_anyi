@@ -18,6 +18,8 @@
 *.zip
 *.tar.gz
 *.rar
+/venv
+*/workspace.xml
 
 ### IntelliJ IDEA ###
 .idea
