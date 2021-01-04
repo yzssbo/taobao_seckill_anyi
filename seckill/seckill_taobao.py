@@ -17,7 +17,6 @@ from utils.utils import get_useragent_data
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-
 from config import global_config
 
 import pyautogui
@@ -55,7 +54,6 @@ class ChromeDrive:
     def start_driver(self):
         try:
             driver = self.find_chromedriver()
-            driver.set_window_size(1200, 1000)
         except WebDriverException:
             print("Unable to find chromedriver, Please check the drive path.")
         else:
@@ -63,21 +61,26 @@ class ChromeDrive:
 
     def find_chromedriver(self):
         try:
-            driver = webdriver.Chrome()
-            driver.set_window_size(1200, 1000)
+            driver = webdriver.Chrome(options=self.build_chrome_options())
 
         except WebDriverException:
             try:
-                driver = webdriver.Chrome(executable_path=self.chrome_path, chrome_options=self.build_chrome_options())
-                driver.set_window_size(1200, 1000)
+                driver = webdriver.Chrome(options=self.build_chrome_options(),executable_path=self.chrome_path, chrome_options=self.build_chrome_options())
+
 
             except WebDriverException:
                 raise
+
+        # 设置全屏浏览器
+        driver.maximize_window()
         return driver
 
     def build_chrome_options(self):
         """配置启动项"""
         chrome_options = webdriver.ChromeOptions()
+        # 此步骤很重要，设置为开发者模式，防止被各大网站识别出来使用了Selenium - 20210105实验证明对于阿里淘宝来说没用，一样被识别出来了
+        chrome_options.add_experimental_option("excludeSwitches", ['enable-automation'])
+
         chrome_options.accept_untrusted_certs = True
         chrome_options.assume_untrusted_cert_issuer = True
         arguments = ['--no-sandbox', '--disable-impl-side-painting', '--disable-setuid-sandbox', '--disable-seccomp-filter-sandbox',
@@ -141,7 +144,6 @@ class ChromeDrive:
             self.driver.find_element_by_id("J_SelectAll1").click()
             print("已经选中全部商品！！！")
 
-        self.driver.maximize_window()
         submit_succ = False
         retry_count = 0
 
@@ -166,17 +168,23 @@ class ChromeDrive:
                         #   此处的计算值请填写自己的,此处要做成配置项
                         # x = 27.3 / 32.1 * 1680 = 1428.8
                         # y = 11.4 / 20.7 * 1050 = 578.3
+                        # 坐标计算方式开始
                         width = pyautogui.size().width
                         height = pyautogui.size().height
                         thisWidth = global_config.getRaw('config', 'thisWidth')
                         thisHeight = global_config.getRaw('config', 'thisHeight')
                         jieSuanWidth = global_config.getRaw('config', 'jieSuanWidth')
                         jieSuanHeight = global_config.getRaw('config', 'jieSuanHeight')
-                        x = jieSuanWidth/thisWidth * width
-                        y = jieSuanHeight/thisHeight * height
+                        x = float(jieSuanWidth)/float(thisWidth) * width
+                        y = float(jieSuanHeight)/float(thisHeight) * height
                         print(f"屏幕宽高为：({width},{height})")
                         print(f"坐标为：({x},{y})")
                         pyautogui.leftClick(x, y)
+                        # 坐标计算方式结束
+                        # 获取元素方式开始
+                        # jiesuan = self.driver.find_element_by_id("J_Go")
+                        # jiesuan.click()
+                        # 获取元素方式结束
                         print("已经点击结算按钮...")
                         click_submit_times = 0
                         while True:
@@ -187,9 +195,11 @@ class ChromeDrive:
                                     submit_succ = True
                                     break
                                 else:
-                                    print("提交订单失败...")
+                                    print("提交订单失败...大于10次，直接就失败吧。试了也没用了。 ")
+                                    break
                             except Exception as e:
-                                # TODO 待优化，这里可能需要返回购物车页面继续进行
+                                # TODO 待优化，这里可能需要返回购物车页面继续进行,也可能结算按钮点击了但是还没有跳转
+                                #     self.driver.find_element_by_link_text('我的购物车').click()
                                 print("没发现提交按钮, 页面未加载, 重试...")
                                 click_submit_times = click_submit_times + 1
                                 sleep(0.1)
