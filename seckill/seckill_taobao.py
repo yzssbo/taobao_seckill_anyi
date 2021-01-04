@@ -77,7 +77,8 @@ class ChromeDrive:
                      '--disable-breakpad', '--disable-client-side-phishing-detection', '--disable-cast',
                      '--disable-cast-streaming-hw-encoding', '--disable-cloud-import', '--disable-popup-blocking',
                      '--ignore-certificate-errors', '--disable-session-crashed-bubble', '--disable-ipv6',
-                     '--allow-http-screen-capture', '--start-maximized']
+                     '--allow-http-screen-capture', '--start-maximized','--ignore-ssl-errors'
+                     ]
         for arg in arguments:
             chrome_options.add_argument(arg)
         chrome_options.add_argument(f'--user-agent={choice(get_useragent_data())}')
