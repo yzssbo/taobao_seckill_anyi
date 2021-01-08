@@ -151,14 +151,13 @@ class ChromeDrive:
             now = datetime.now()
             if now >= self.seckill_time_obj:
                 print(f"开始抢购, 尝试次数： {str(retry_count)}")
+                retry_count = retry_count + 1
                 if submit_succ:
                     print("订单已经提交成功，无需继续抢购...")
                     break
                 if retry_count > max_retry_count:
                     print("重试抢购次数达到上限，放弃重试...")
                     break
-
-                retry_count += 1
 
                 try:
 # 判断存在结算按钮
