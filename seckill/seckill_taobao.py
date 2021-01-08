@@ -179,6 +179,8 @@ class ChromeDrive:
                         print(f"屏幕宽高为：({width},{height})")
                         print(f"坐标为：({x},{y})")
                         pyautogui.leftClick(x, y)
+                        # 移动鼠标到指定坐标，方便定位
+                        pyautogui.moveTo(x, y)
                         # 坐标计算方式结束
                         # 获取元素方式开始
                         # jiesuan = self.driver.find_element_by_id("J_Go")
