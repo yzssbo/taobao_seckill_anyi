@@ -3,6 +3,9 @@
 ![https://img-blog.csdnimg.cn/20201019162545488.jpg](https://img-blog.csdnimg.cn/20201019162545488.jpg)
 回复：pythontb
 
+目前有了更好的方式(不会被风控)，推荐大家用这个：  
+[Chrome插件的使用【天猫超市抢购飞天茅台】](https://chenhx.blog.csdn.net/article/details/112489954)  
+
 # 更新记录 
 
 ## 20210104
