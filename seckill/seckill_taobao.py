@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 # encoding=utf-8
-
-
 import os
 import platform
+import time
 from time import sleep
 from random import choice
 from datetime import datetime
@@ -24,7 +23,7 @@ pyautogui.PAUSE = 0.5
 
 
 # 抢购失败最大次数
-max_retry_count = 30
+max_retry_count = 10
 
 
 def default_chrome_path():
@@ -42,9 +41,7 @@ def default_chrome_path():
         raise Exception("The chromedriver drive path attribute is not found.")
 
 
-
 class ChromeDrive:
-
     def __init__(self, chrome_path=default_chrome_path(), seckill_time=None, password=None):
         self.chrome_path = chrome_path
         self.seckill_time = seckill_time
@@ -61,12 +58,11 @@ class ChromeDrive:
 
     def find_chromedriver(self):
         try:
-            driver = webdriver.Chrome(options=self.build_chrome_options())
+            driver = webdriver.Chrome(executable_path=global_config.get('config', 'chromePath'), options=self.build_chrome_options())
 
         except WebDriverException:
             try:
-                driver = webdriver.Chrome(options=self.build_chrome_options(),executable_path=self.chrome_path, chrome_options=self.build_chrome_options())
-
+                driver = webdriver.Chrome(options=self.build_chrome_options(), executable_path=self.chrome_path, chrome_options=self.build_chrome_options())
 
             except WebDriverException:
                 raise
@@ -79,43 +75,38 @@ class ChromeDrive:
         """配置启动项"""
         chrome_options = webdriver.ChromeOptions()
         # 此步骤很重要，设置为开发者模式，防止被各大网站识别出来使用了Selenium - 20210105实验证明对于阿里淘宝来说没用，一样被识别出来了
-        chrome_options.add_experimental_option("excludeSwitches", ['enable-automation'])
+        # 设置监听地址, 本地启动chrome浏览器, 代码接入,  并修改了chromedriver中 $cdc参数防止淘宝检测
+        # 终端运行 /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --remote-debugging-port=9222      (mac地址, windows找到chrome安装地址)
+        chrome_options.binary_location = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+        chrome_options.add_experimental_option('debuggerAddress', '127.0.0.1:9222')
 
-        chrome_options.accept_untrusted_certs = True
-        chrome_options.assume_untrusted_cert_issuer = True
-        arguments = ['--no-sandbox', '--disable-impl-side-painting', '--disable-setuid-sandbox', '--disable-seccomp-filter-sandbox',
-                     '--disable-breakpad', '--disable-client-side-phishing-detection', '--disable-cast',
-                     '--disable-cast-streaming-hw-encoding', '--disable-cloud-import', '--disable-popup-blocking',
-                     '--ignore-certificate-errors', '--disable-session-crashed-bubble', '--disable-ipv6',
-                     '--allow-http-screen-capture', '--start-maximized','--ignore-ssl-errors'
-                     ]
-        for arg in arguments:
-            chrome_options.add_argument(arg)
-        chrome_options.add_argument(f'--user-agent={choice(get_useragent_data())}')
         return chrome_options
 
-    def _login(self, login_url: str="https://www.taobao.com"):
+    def _login(self, login_url: str="https://login.taobao.com/member/login.jhtml"):
         if login_url:
             self.driver = self.start_driver()
         else:
             print("Please input the login url.")
             raise Exception("Please input the login url.")
-
-
         while True:
             self.driver.get(login_url)
             try:
-                if self.driver.find_element_by_link_text("亲，请登录"):
-                    print("没登录，开始点击登录按钮...")
-                    self.driver.find_element_by_link_text("亲，请登录").click()
-                    print("请在30s内扫码登陆!!")
-                    sleep(30)
-                    if self.driver.find_element_by_xpath('//*[@id="J_SiteNavMytaobao"]/div[1]/a/span'):
-                        print("登陆成功")
-                        break
-                    else:
-                        print("登陆失败, 刷新重试, 请尽快登陆!!!")
-                        continue
+                user = self.driver.find_element_by_id("fm-login-id")
+                user.clear()
+                user.send_keys(global_config.get('secret', 'username'))
+                password = self.driver.find_element_by_id("fm-login-password")
+                password.clear()
+                password.send_keys(global_config.get('secret', 'pwd'))
+                butt = self.driver.find_element_by_xpath('//*[@id="login-form"]/div[4]/button')
+                butt.click()
+                time.sleep(0.5)
+                element = WebDriverWait(self.driver, 20).until(EC.presence_of_element_located((By.XPATH, '//*[@id="J_SiteNavMytaobao"]/div[1]/a/span')))
+                if element:
+                    print("登陆成功")
+                    break
+                else:
+                    print("登陆失败, 刷新重试, 请尽快登陆!!!")
+                    continue
             except Exception as e:
                 print(str(e))
                 continue
@@ -124,9 +115,10 @@ class ChromeDrive:
         self._login()
         print("等待到点抢购...")
         while True:
-            current_time = datetime.now()
+            current_time = time.mktime(datetime.now().timetuple())
+            start_time = time.mktime(self.seckill_time_obj.timetuple())
             # 此处修判断
-            if (self.seckill_time_obj.second - current_time.second) > 120:
+            if (start_time - current_time) > 120:
                 self.driver.get("https://cart.taobao.com/cart.htm")
                 print("每分钟刷新一次界面，防止登录超时...")
                 sleep(60)
@@ -148,6 +140,11 @@ class ChromeDrive:
         retry_count = 0
 
         while True:
+            if retry_count != 0:    # 重试进入后,需要再次全选
+                if self.driver.find_element_by_id("J_SelectAll1"):
+                    self.driver.find_element_by_id("J_SelectAll1").click()
+                    print("已经选中全部商品！！！")
+
             now = datetime.now()
             if now >= self.seckill_time_obj:
                 print(f"开始抢购, 尝试次数： {str(retry_count)}")
@@ -160,59 +157,33 @@ class ChromeDrive:
                     break
 
                 try:
-# 判断存在结算按钮
-                    if self.driver.find_element_by_id("J_Go"):
-                        # coords = pyautogui.locateOnScreen('/Users/chenhx/Desktop/github/taobao_seckill/img/jiesuan.jpg')
-                        # x, y = pyautogui.center(coords)
-                        #   此处的计算值请填写自己的,此处要做成配置项
-                        # x = 27.3 / 32.1 * 1680 = 1428.8
-                        # y = 11.4 / 20.7 * 1050 = 578.3
-                        # 坐标计算方式开始
-                        width = pyautogui.size().width
-                        height = pyautogui.size().height
-                        thisWidth = global_config.getRaw('config', 'thisWidth')
-                        thisHeight = global_config.getRaw('config', 'thisHeight')
-                        jieSuanWidth = global_config.getRaw('config', 'jieSuanWidth')
-                        jieSuanHeight = global_config.getRaw('config', 'jieSuanHeight')
-                        x = float(jieSuanWidth)/float(thisWidth) * width
-                        y = float(jieSuanHeight)/float(thisHeight) * height
-                        print(f"屏幕宽高为：({width},{height})")
-                        print(f"坐标为：({x},{y})")
-                        # 移动鼠标到指定坐标，方便定位
-                        pyautogui.moveTo(x, y)
-                        pyautogui.leftClick(x, y)
-                        # 坐标计算方式结束
-                        # 获取元素方式开始
-                        # jiesuan = self.driver.find_element_by_id("J_Go")
-                        # jiesuan.click()
-                        # 获取元素方式结束
-                        print("已经点击结算按钮...")
-                        click_submit_times = 0
-                        while True:
-                            try:
-                                if click_submit_times < 10:
-                                    self.driver.find_element_by_link_text('提交订单').click()
-                                    print("已经点击提交订单按钮")
-                                    submit_succ = True
-                                    break
-                                else:
-                                    print("提交订单失败...大于10次，直接就失败吧。试了也没用了。 ")
-                                    break
-                            except Exception as e:
-                                # TODO 待优化，这里可能需要返回购物车页面继续进行,也可能结算按钮点击了但是还没有跳转
-                                #     self.driver.find_element_by_link_text('我的购物车').click()
-                                print("没发现提交按钮, 页面未加载, 重试...")
-                                click_submit_times = click_submit_times + 1
-                                sleep(0.1)
+                    # 坐标计算方式开始
+                    width = pyautogui.size().width
+                    height = pyautogui.size().height
+                    x = 1144
+                    y = 562
+                    print(f"屏幕宽高为：({width},{height})")
+                    print(f"坐标为：({x},{y})")
+                    # 移动鼠标到指定坐标，方便定位
+                    pyautogui.moveTo(x, y)
+                    pyautogui.leftClick(x, y)
+                    print("已经点击结算按钮...")
+                    self.driver.find_element_by_link_text('提交订单').click()
+                    print("已经点击提交订单按钮")
+                    submit_succ = True
                 except Exception as e:
-                    print(e)
-                    print("临时写的脚本, 可能出了点问题!!!")
+                    submit_succ = False
+                    link = WebDriverWait(self.driver, 10).until(EC.presence_of_element_located((By.ID, 'mc-menu-hd')))
+                    link = link.get_attribute('href')
+                    self.driver.get(link)
+                    time.sleep(0.1)
+                    print("提交失败, 前方拥堵, 重新下单...")
+                    continue
 
             sleep(0.1)
         if submit_succ:
             if self.password:
                 self.pay()
-
 
     def pay(self):
         try:
