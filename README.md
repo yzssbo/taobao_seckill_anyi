@@ -1,30 +1,23 @@
-
-扫公众号关注不迷路：    
-![https://img-blog.csdnimg.cn/20201019162545488.jpg](https://img-blog.csdnimg.cn/20201019162545488.jpg)
-回复：pythontb
-
-目前有了更好的方式(不会被风控)，推荐大家用这个：  
-[Chrome插件的使用【天猫超市抢购飞天茅台】](https://chenhx.blog.csdn.net/article/details/112489954)  
-
 # 更新记录 
 
-## 20210104
-- 时间格式修改
-- 优化倒计时  
-- 集成pyautogui，避免被淘宝检测出是无头浏览器的点击（解决提交结算无效的情况，此原因由淘宝检测导致）
-    - 安装命令：```python -m pip install pyautogui```
-- 增加getxy.py文件，输出自己电脑屏幕的宽高  
-- 增加四个参数，config.ini文件中配置
-  - 屏幕的宽高，单位：毫米
-  - 结算按钮的宽高，单位：毫米
-  - （浏览器全屏，在购物车页面，量出结算按钮的坐标。购物车只有一个商品的情况）
+## 2021-01-18
+1. 在原作者的基础上, 写死了购物车结算按钮的x, y坐标, 不同的电脑分辨率不同, mac推荐使用(myPoint Coordinates), windows自行百度
+   所有的坐标均是以chrome全屏展开为准
 
-目前教程还在准备中，可以先关注专栏：  
-https://blog.csdn.net/qq_26525215/category_10710827.html  
+2. 修复了每隔60s刷新购物车防止掉线的时间戳取值错误问题
 
-教程出来后，专栏便会更新  
+3. 修改了chromedriver中$cdc标识, 以绕过淘宝检测
 
-以上是基于原作者的代码进行的一些优化和修改。  
+4. 启用原作者的最后一条说明绕过淘宝检测:
+   在完成3的基础上
+   设置监听地址, 本地终端手动启动chrome浏览器, 代码接入,  并修改了chromedriver中 $cdc参数防止淘宝检测
+   终端运行 /Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome --remote-debugging-port=9222      
+   (mac中chrome安装地址, windows找到chrome安装地址, 后缀参数保持不变, 启用这条命令前确保chrome完全退出状态!!!)
+   终端执行后,会唤起chrome, 地址栏可以输入127.0.0.1:9200/json查看, 若能正常加载出插件信息则说明成功!
+
+具体修改$cdc标识的方法参考  https://blog.csdn.net/taojian_/article/details/97758632 这位老哥的
+此修改仅为个人学习兴趣
+
 
 以下为原作者的说明：
 

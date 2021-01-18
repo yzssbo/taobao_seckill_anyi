@@ -155,15 +155,17 @@ class ChromeDrive:
                 if retry_count > max_retry_count:
                     print("重试抢购次数达到上限，放弃重试...")
                     break
-
+                if not retry_count:  # 首次抢购时间稍微延后0.8秒,  设置开始时间一般为正式开始发售的前1s
+                    sleep(0.8)
+                print(datetime.now())
                 try:
-                    # 坐标计算方式开始
+                    # 坐标写死从配置文件读取
                     width = pyautogui.size().width
                     height = pyautogui.size().height
-                    x = 1144
-                    y = 562
+                    x = global_config.get('config', 'xCoor')
+                    y = global_config.get('config', 'yCoor')
                     print(f"屏幕宽高为：({width},{height})")
-                    print(f"坐标为：({x},{y})")
+                    print(f"结算按钮坐标为：({x},{y})")
                     # 移动鼠标到指定坐标，方便定位
                     pyautogui.moveTo(x, y)
                     pyautogui.leftClick(x, y)
